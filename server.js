@@ -246,7 +246,7 @@ app.post("/:token", (req, res) => {
         <body>
           <div class="container success">
             ✅ Done!<br/><br/>
-            <pre class="lua-code">loadstring(game:HttpGet("http://localhost:3000/files/${filename}"))()</pre>
+            <pre class="lua-code">loadstring(game:HttpGet("http://ilovetexting.online/files/${filename}"))()</pre>
           </div>
         </body>
       </html>
