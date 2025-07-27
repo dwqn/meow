@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>MiniChat</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="login">
+    <h2>Enter your username</h2>
+    <input type="text" id="usernameInput" placeholder="Username..." />
+    <button id="joinBtn">Join</button>
+  </div>
+
+  <div id="chatApp" style="display:none;">
+    <h3 id="yourName"></h3>
+    <div id="onlineUsers"></div>
+    <div id="chatBox"></div>
+    <input type="text" id="msgInput" placeholder="Type a message..." />
+    <button id="sendBtn">Send</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
