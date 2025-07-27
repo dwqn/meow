@@ -4,6 +4,23 @@ body {
   background-color: #2c2f33;
   color: white;
 }
+.tabs {
+  background: #1e2124;
+  padding: 5px;
+  display: flex;
+  overflow-x: auto;
+}
+
+.tabs button {
+  margin-right: 5px;
+  background: #36393f;
+  border: none;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
 
 #loginScreen {
   display: flex;
