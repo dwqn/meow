@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  background: #111;
+  color: white;
+  font-family: Arial, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+}
+.center {
+  background: #333;
+  padding: 20px 40px;
+  border-radius: 8px;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.center:hover {
+  background: #555;
+}
+.captcha-container {
+  text-align: center;
+}
+#captcha-code {
+  font-size: 2rem;
+  letter-spacing: 5px;
+  background: #222;
+  padding: 10px;
+  margin-bottom: 10px;
+  display: inline-block;
+}
