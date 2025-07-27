@@ -1,10 +1,11 @@
+// client.js
 window.onload = function () {
   const socket = io();
 
-  let currentUser = null;
+  let currentUser = JSON.parse(localStorage.getItem("currentUser")) || null;
   let selectedUser = null;
-  const chatTabs = {}; // userId -> chat history
-  const friends = JSON.parse(localStorage.getItem("friends")) || [];
+  let friends = JSON.parse(localStorage.getItem("friends")) || [];
+  const chatTabs = JSON.parse(localStorage.getItem("chatTabs")) || {}; // userId -> chat history
 
   const loginScreen = document.getElementById("loginScreen");
   const chatScreen = document.getElementById("chatScreen");
@@ -12,141 +13,126 @@ window.onload = function () {
   const joinBtn = document.getElementById("joinBtn");
   const selfUser = document.getElementById("selfUser");
   const userList = document.getElementById("userList");
-  const tabs = document.getElementById("tabs");
-  const currentChat = document.getElementById("currentChat");
   const chatBox = document.getElementById("chatBox");
+  const currentChat = document.getElementById("currentChat");
   const msgInput = document.getElementById("msgInput");
   const sendBtn = document.getElementById("sendBtn");
+  const friendSearchInput = document.getElementById("friendSearchInput");
+  const friendSearchResults = document.getElementById("friendSearchResults");
 
-  joinBtn.onclick = () => {
-    const username = usernameInput.value.trim();
-    if (username) socket.emit("register", username);
-  };
-
-  socket.on("registered", (user) => {
-    currentUser = user;
-    localStorage.setItem("user", JSON.stringify(user));
-    loginScreen.style.display = "none";
-    chatScreen.style.display = "flex";
-    selfUser.textContent = `${user.username}#${user.tag}`;
-  });
-
-  const storedUser = JSON.parse(localStorage.getItem("user"));
-  if (storedUser) {
-    socket.emit("register", storedUser.username);
-  }
-
-  socket.on("update-users", (users) => {
-    userList.innerHTML = "";
-    users.forEach((user) => {
-      if (user.id === currentUser?.id) return;
-
-      const userIsFriend = friends.some(f => f.username === user.username && f.tag === user.tag);
-
-      const wrapper = document.createElement("div");
-      wrapper.style.display = "flex";
-      wrapper.style.alignItems = "center";
-
-      const btn = document.createElement("button");
-      btn.textContent = `${user.username}#${user.tag}`;
-      btn.onclick = () => openChat(user);
-      wrapper.appendChild(btn);
-
-      if (!userIsFriend) {
-        const addBtn = document.createElement("span");
-        addBtn.textContent = "➕";
-        addBtn.style.marginLeft = "5px";
-        addBtn.style.cursor = "pointer";
-        addBtn.onclick = (e) => {
-          e.stopPropagation();
-          showFriendPrompt(user);
-        };
-        wrapper.appendChild(addBtn);
-      }
-
-      userList.appendChild(wrapper);
+  function updateFriendsListUI() {
+    const friendsList = document.getElementById("friendsList");
+    friendsList.innerHTML = "";
+    friends.forEach(friend => {
+      const li = document.createElement("li");
+      li.textContent = `${friend.username}#${friend.tag}`;
+      li.addEventListener("click", () => switchTab(friend.id));
+      friendsList.appendChild(li);
     });
-  });
-
-  function openChat(user) {
-    selectedUser = user;
-    if (!chatTabs[user.id]) chatTabs[user.id] = [];
-
-    updateTabs(user);
-    updateChatBox();
+    localStorage.setItem("friends", JSON.stringify(friends));
   }
 
-  function updateTabs(user) {
-    const exists = [...tabs.children].some(tab => tab.dataset.id === user.id);
-    if (!exists) {
-      const tab = document.createElement("button");
-      tab.textContent = `${user.username}#${user.tag}`;
-      tab.dataset.id = user.id;
-      tab.onclick = () => {
-        selectedUser = user;
-        updateChatBox();
-      };
-      tabs.appendChild(tab);
-    }
+  function switchTab(userId) {
+    selectedUser = userId;
+    currentChat.innerHTML = "";
+    const messages = chatTabs[userId] || [];
+    messages.forEach(msg => renderMessage(msg));
   }
 
-  function updateChatBox() {
-    currentChat.textContent = `Chatting with ${selectedUser.username}#${selectedUser.tag}`;
-    chatBox.innerHTML = chatTabs[selectedUser.id].join("");
-  }
-
-  sendBtn.onclick = () => {
-    const msg = msgInput.value.trim();
-    if (msg && selectedUser) {
-      const formattedMsg = `<p><b>You:</b> ${parseMarkdown(msg)}</p>`;
-      socket.emit("send-message", {
-        to: selectedUser.id,
-        message: msg,
-      });
-
-      chatTabs[selectedUser.id] = chatTabs[selectedUser.id] || [];
-      chatTabs[selectedUser.id].push(formattedMsg);
-      updateChatBox();
-      msgInput.value = "";
-    }
-  };
-
-  socket.on("receive-message", ({ from, message }) => {
-    const fromId = Object.entries(chatTabs).find(
-      ([id, msgs]) => msgs.some(m => m.includes(from))
-    )?.[0];
-
-    const msgHTML = `<p><b>${from}:</b> ${parseMarkdown(message)}</p>`;
-
-    if (fromId) {
-      chatTabs[fromId] = chatTabs[fromId] || [];
-      chatTabs[fromId].push(msgHTML);
-      if (selectedUser && selectedUser.id === fromId) {
-        updateChatBox();
-      }
-    } else {
-      chatBox.innerHTML += msgHTML;
-    }
-  });
-
-  function showFriendPrompt(user) {
-    if (confirm(`Accept ${user.username}#${user.tag} as a friend?`)) {
-      friends.push({ username: user.username, tag: user.tag });
-      localStorage.setItem("friends", JSON.stringify(friends));
-      alert("Friend added! ✅");
-      socket.emit("register", currentUser.username); // force UI refresh
-    }
+  function renderMessage(data) {
+    const msg = document.createElement("div");
+    msg.classList.add("message");
+    msg.innerHTML = `<strong>${data.from}</strong>: ${parseMarkdown(data.message)}`;
+    currentChat.appendChild(msg);
+    currentChat.scrollTop = currentChat.scrollHeight;
   }
 
   function parseMarkdown(text) {
     return text
-      .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
-      .replace(/\*(.*?)\*/g, "<i>$1</i>")
-      .replace(/:([a-zA-Z0-9_+-]+):/g, (_, name) => emojiMap[name] || `:${name}:`);
+      .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+      .replace(/\*(.*?)\*/g, '<i>$1</i>')
+      .replace(/`(.*?)`/g, '<code>$1</code>');
   }
 
-  const emojiMap = {
-    smile: "😄", sad: "😢", heart: "❤️", fire: "🔥",
-    clap: "👏", thumbsup: "👍", poop: "💩"
-  };
+  joinBtn.addEventListener("click", () => {
+    const username = usernameInput.value.trim();
+    if (username) {
+      socket.emit("register", username);
+    }
+  });
+
+  socket.on("registered", user => {
+    currentUser = user;
+    localStorage.setItem("currentUser", JSON.stringify(user));
+    loginScreen.style.display = "none";
+    chatScreen.style.display = "flex";
+    selfUser.textContent = `${user.username}#${user.tag}`;
+    updateFriendsListUI();
+  });
+
+  sendBtn.addEventListener("click", sendMessage);
+  msgInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+  });
+
+  function sendMessage() {
+    const msg = msgInput.value.trim();
+    if (msg && selectedUser) {
+      const data = { to: selectedUser, message: msg };
+      socket.emit("private message", data);
+      const local = { from: "You", message: msg };
+      if (!chatTabs[selectedUser]) chatTabs[selectedUser] = [];
+      chatTabs[selectedUser].push(local);
+      renderMessage(local);
+      msgInput.value = "";
+      localStorage.setItem("chatTabs", JSON.stringify(chatTabs));
+    }
+  }
+
+  socket.on("private message", data => {
+    if (!chatTabs[data.fromId]) chatTabs[data.fromId] = [];
+    chatTabs[data.fromId].push({ from: data.from, message: data.message });
+    if (selectedUser === data.fromId) {
+      renderMessage({ from: data.from, message: data.message });
+    }
+    localStorage.setItem("chatTabs", JSON.stringify(chatTabs));
+  });
+
+  friendSearchInput.addEventListener("input", () => {
+    const query = friendSearchInput.value.trim();
+    socket.emit("search users", query);
+  });
+
+  socket.on("search results", results => {
+    friendSearchResults.innerHTML = "";
+    results.forEach(user => {
+      if (user.id !== currentUser.id && !friends.find(f => f.id === user.id)) {
+        const div = document.createElement("div");
+        div.textContent = `${user.username}#${user.tag}`;
+        const btn = document.createElement("button");
+        btn.innerHTML = '<i class="fas fa-user-plus"></i>';
+        btn.addEventListener("click", () => {
+          socket.emit("send friend request", user.id);
+        });
+        div.appendChild(btn);
+        friendSearchResults.appendChild(div);
+      }
+    });
+  });
+
+  socket.on("friend request", user => {
+    const shouldAdd = confirm(`${user.username}#${user.tag} wants to be your friend! Accept?`);
+    if (shouldAdd) {
+      socket.emit("accept friend", user.id);
+      friends.push(user);
+      updateFriendsListUI();
+    } else {
+      socket.emit("deny friend", user.id);
+    }
+  });
+
+  socket.on("friend accepted", user => {
+    friends.push(user);
+    updateFriendsListUI();
+  });
 };
